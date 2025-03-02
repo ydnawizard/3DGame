@@ -183,6 +183,7 @@ int main(){
 	SDL_Event e;
 	SDL_Init(SDL_INIT_VIDEO);
 	bool running=true;
+	SDL_FRect rect={0,0,10000,720};
 	SDL_CreateWindowAndRenderer("window",windowWidth,windowHeight,0,&window,&renderer);
 	while(running){
 		while(SDL_PollEvent(&e)){
@@ -214,9 +215,10 @@ int main(){
 		}
 		SDL_SetRenderDrawColor(renderer,0,0,0,255);
 		SDL_RenderClear(renderer);
-		SDL_SetRenderDrawColor(renderer,130,0,0,255);
-		//renderShape(cube1.vertices,cube1.position,cube1.type);
-
+		SDL_SetRenderDrawColor(renderer,255,255,255,255);
+		SDL_RenderFillRect(renderer,&rect);
+		SDL_SetRenderDrawColor(renderer,180,0,0,255);
+		//renderShape(cube1.vertices,cube1.position,cube1.type)
 		renderShape(cube2.vertices,cube2.position,cube2.type);
 		renderShape(cube1.vertices,cube1.position,cube1.type);
 		SDL_RenderPresent(renderer);
