@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <string.h>
+#include "homtrig.h"
 
 int windowWidth=1440;
 int windowHeight=720;
@@ -23,33 +24,6 @@ struct cube{
 	int vertsLength;
 };
 
-
-//4x1 vector X 4x4 matrix multiplier
-void vecTransform(float vec[3],float transform[4][4]){
-	float tempVec[4];
-	tempVec[0]=vec[0]*transform[0][0]+vec[1]*transform[0][1]+vec[2]*transform[0][2]+vec[3]*transform[0][3];
-	tempVec[1]=vec[0]*transform[1][0]+vec[1]*transform[1][1]+vec[2]*transform[1][2]+vec[3]*transform[1][3];
-	tempVec[2]=vec[0]*transform[2][0]+vec[1]*transform[2][1]+vec[2]*transform[2][2]+vec[3]*transform[2][3];
-	tempVec[3]=vec[0]*transform[3][0]+vec[1]*transform[3][1]+vec[2]*transform[3][2]+vec[3]*transform[3][3];
-	if(tempVec[3]!=0.0f){
-		tempVec[0]/=tempVec[3];
-		tempVec[1]/=tempVec[3];
-		tempVec[2]/=tempVec[3];
-		tempVec[3]=vec[3];
-	}
-	vec[0]=tempVec[0];
-	vec[1]=tempVec[1];
-	vec[2]=tempVec[2];
-	vec[3]=tempVec[3];
-}
-
-//Multiplies each vertice vector in shape by transformation matrix 
-void shapeTransform(float shape[8][4],float transform[4][4]){
-	float tempVec[4];
-	for(int i=0;i<8;i++){
-		vecTransform(shape[i],transform);
-	}
-}
 
 //Converts vertice coordinates from cartesian plane where all math is done to the sdl plane where theres no negatives
 //uses the sdl renderer to draw the cubes on the screen
@@ -97,8 +71,11 @@ int main(){
 		{100.0f,-100.0f,-100.0f,1},
 		{100.0f,100.0f,-100.0f,1}},
 		{0.0,360.0,360.0f,1},"cube",8};
-	struct cube cube2={{
-		{-100.0f,-100.0f,-100.0f,0},
+	struct CUBE_3D cube2={
+		{720.0,360.0,200.0,1},
+		1,
+		8,
+		{{-100.0f,-100.0f,-100.0f,0},
 		{-100.0f,100.0f,-100.0f,0},
 		{100.0f,-100.0f,-100.0f,0},
 		{100.0f,100.0f,-100.0f,0},
@@ -106,38 +83,7 @@ int main(){
 		{-100.0f,100.0f,100.0f,1},
 		{100.0f,-100.0f,100.0f,1},
 		{100.0f,100.0f,100.0f,1}},
-		{720.0,360.0,200.0,1},"cube",8};
-	struct cube shapes[2]={cube1,cube2};
-	float yrotate[4][4]={
-		{cosf(fov),0,sinf(fov),0},
-		{0,1,0,0},
-		{-sinf(fov),0,cosf(fov),0},
-		{0,0,0,1}
-	};
-	float xrotate[4][4]={
-		{1,0,0,0},
-		{0,cosf(fov),-sinf(fov),0},
-		{0,sinf(fov),cosf(fov),0},
-		{0,0,0,1}
-	};
-	float zrotate[4][4]={
-		{cosf(fov),-sinf(fov),0,0},
-		{sinf(fov),cosf(fov),0,0},
-		{0,0,1,0},
-		{0,0,0,1}
-	};
-	float scaleDown[4][4]={
-		{1.01,0,0,0},
-		{0,1.01,0,0},
-		{0,0,1.01,0},
-		{0,0,0,1},
-	};
-	float scaleUp[4][4]={
-		{.99,0,0,0},
-		{0,.99,0,0},
-		{0,0,.99,0},
-		{0,0,0,1}
-	};
+		};
 	float camera=0.0000;
 	SDL_Event e;
 	SDL_Init(SDL_INIT_VIDEO);
@@ -151,30 +97,32 @@ int main(){
 			else if(e.type==SDL_EVENT_KEY_DOWN){
 				const bool* keyboardState=SDL_GetKeyboardState(NULL);
 				if(keyboardState[SDL_SCANCODE_W]){
-					shapeTransform(cube1.vertices,scaleUp);
-					shapeTransform(cube2.vertices,scaleUp);
+					cubeTransform3d(&cube2,"scale",'+',fov);
+					cube2.position[3]-=10;
 					break;
 				}else if(keyboardState[SDL_SCANCODE_S]){
-				        shapeTransform(cube1.vertices,scaleDown);
-					shapeTransform(cube2.vertices,scaleDown);
+					cubeTransform3d(&cube2,"scale",'-',fov);
+					cube2.position[4]+=10;
 					break;
 				}else if(keyboardState[SDL_SCANCODE_R]){
-					shapeTransform(cube2.vertices,xrotate);
+					cubeTransform3d(&cube2,"rotate",'x',fov);
 					break;
 				}else if(keyboardState[SDL_SCANCODE_A]){
+					cube2.position[0]-=10;
+					break;
 				}else if(keyboardState[SDL_SCANCODE_D]){
+					cube2.position[0]+=10;
 				}
 
 			}
 		}
 		SDL_SetRenderDrawColor(renderer,0,0,0,255);
 		SDL_RenderClear(renderer);
-		SDL_SetRenderDrawColor(renderer,255,255,255,255);
-		SDL_RenderFillRect(renderer,&rect);
 		SDL_SetRenderDrawColor(renderer,180,0,0,255);
-		renderShape(cube2.vertices,cube2.position,cube2.type);
+		renderShape(cube2.vertices,cube2.position,"cube");
 		//renderShape(cube1.vertices,cube1.position,cube1.type)
-		shapeTransform(cube2.vertices,yrotate);
+		cubeTransform3d(&cube2,"rotate",'y',fov);
+		cubeTransform3d(&cube2,"rotate",'z',fov);
 		//shapeTransform(cube2.vertices,xrotate);
 		//shapeTransform(cube2.vertices,zrotate);
 		//renderShape(cube1.vertices,cube1.position,cube1.type);
