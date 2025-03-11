@@ -4,92 +4,49 @@
 #include <unistd.h>
 #include <math.h>
 #include <string.h>
-#include "homtrig.h"
+#include "linalg2.h"
+#include "render.h"
 
-int windowWidth=1440;
-int windowHeight=720;
+float windowWidth=1440;
+float windowHeight=720;
 float aspectRatio=1440/720;
-float fov=.0174533*2;
+float fov=.0174533*200;
+float theta=.0174533;
 float znear=0;
-float zfar=2;
+float zfar=1000;
 SDL_Window* window;
 SDL_Renderer* renderer;
 float scene[2];
 float perspective[4][4];
-
-struct cube{
-	float vertices[8][4];
-	float position[4];
-	char* type;
-	int vertsLength;
-};
-
-
-//Converts vertice coordinates from cartesian plane where all math is done to the sdl plane where theres no negatives
-//uses the sdl renderer to draw the cubes on the screen
-void renderShape(float shape[][4],float position[4],char* type){
-	/*float perspective[4][4]={
-		{(aspectRatio/(tanf(fov/2.0000f))),0,0,0},
-		{0,(1/tanf(fov/2)),0,0},
-		{0,0,(zfar)/(zfar-znear),-(zfar*znear)/(zfar-znear)},
-		{0,0,1,0}
-	};*/
-	int size;
-	if(strcmp(type,"cube")==0)
-		size=8;	
-	/*float tempShape[size][4];
-	memcpy(tempShape,shape,sizeof(float)*size*4);
-	shapeTransform(tempShape,perspective);*/
-	float shapeNorm[size][4];
-	for(int i=0;i<size;i++){
-		for(int j=0;j<4;j++){
-			shapeNorm[i][j]=position[j]-shape[i][j];
-		}
-	}
-	SDL_RenderLine(renderer,shapeNorm[0][0],shapeNorm[0][1],shapeNorm[1][0],shapeNorm[1][1]);
-	SDL_RenderLine(renderer,shapeNorm[3][0],shapeNorm[3][1],shapeNorm[1][0],shapeNorm[1][1]);
-	SDL_RenderLine(renderer,shapeNorm[2][0],shapeNorm[2][1],shapeNorm[3][0],shapeNorm[3][1]);
-	SDL_RenderLine(renderer,shapeNorm[0][0],shapeNorm[0][1],shapeNorm[2][0],shapeNorm[2][1]);
-	SDL_RenderLine(renderer,shapeNorm[4][0],shapeNorm[4][1],shapeNorm[5][0],shapeNorm[5][1]);
-	SDL_RenderLine(renderer,shapeNorm[7][0],shapeNorm[7][1],shapeNorm[5][0],shapeNorm[5][1]);
-	SDL_RenderLine(renderer,shapeNorm[6][0],shapeNorm[6][1],shapeNorm[7][0],shapeNorm[7][1]);
-	SDL_RenderLine(renderer,shapeNorm[4][0],shapeNorm[4][1],shapeNorm[6][0],shapeNorm[6][1]);
-	SDL_RenderLine(renderer,shapeNorm[4][0],shapeNorm[4][1],shapeNorm[0][0],shapeNorm[0][1]);
-	SDL_RenderLine(renderer,shapeNorm[5][0],shapeNorm[5][1],shapeNorm[1][0],shapeNorm[1][1]);
-	SDL_RenderLine(renderer,shapeNorm[6][0],shapeNorm[6][1],shapeNorm[2][0],shapeNorm[2][1]);
-	SDL_RenderLine(renderer,shapeNorm[7][0],shapeNorm[7][1],shapeNorm[3][0],shapeNorm[3][1]);
-}
+struct SHAPE* cubes[3];
+struct SHAPE* planes[3];
 
 int main(){
-	struct cube cube1={{
-		{-100.0f,-100.0f,100.0f,1},
-		{-100.0f,100.0f,100.0f,1},
-		{100.0f,-100.0f,100.0f,1},
-		{100.0f,100.0f,100.0f,1},
-		{-100.0f,-100.0f,-100.0,1},
-		{-100.0f,100.0f,-100.0f,1},
-		{100.0f,-100.0f,-100.0f,1},
-		{100.0f,100.0f,-100.0f,1}},
-		{0.0,360.0,360.0f,1},"cube",8};
-	struct CUBE_3D cube2={
-		{720.0,360.0,200.0,1},
-		1,
-		8,
-		{{-100.0f,-100.0f,-100.0f,0},
-		{-100.0f,100.0f,-100.0f,0},
-		{100.0f,-100.0f,-100.0f,0},
-		{100.0f,100.0f,-100.0f,0},
-		{-100.0f,-100.0f,100.0f,1},
-		{-100.0f,100.0f,100.0f,1},
-		{100.0f,-100.0f,100.0f,1},
-		{100.0f,100.0f,100.0f,1}},
-		};
-	float camera=0.0000;
+	float white[4]={255,255,255,255};
+	float red[4]={180,0,0,255};
+	float blue[4]={0,0,255,255};
+	float green[4]={0,255,0,255};
+	float position1[4]={360.0,360.0,300,1};
+	float position2[4]={720.0,360.0,500.0,1};
+	float position3[4]={1080.0,360.0,700.0,1};
+	float perspectiveVals[6]={windowWidth,windowHeight,aspectRatio,fov,znear,zfar};
+	cubes[0]=generateCube(position1,10,red);
+	cubes[1]=generateCube(position2,10,green);
+	cubes[2]=generateCube(position3,10,blue);
+	struct MAP map;
+	map.shapesCount=3;
+	map.id=0;
+	map.shapes=(struct SHAPE**)malloc(sizeof(struct SHAPE*));
 	SDL_Event e;
 	SDL_Init(SDL_INIT_VIDEO);
 	bool running=true;
-	SDL_FRect rect={0,0,10000,720};
-	SDL_CreateWindowAndRenderer("window",windowWidth,windowHeight,0,&window,&renderer);
+	SDL_CreateWindowAndRenderer("window",windowWidth,windowHeight,SDL_WINDOW_RESIZABLE,&window,&renderer);
+	for(int i=0;i<3;i++){
+		map.shapes[i]=(struct SHAPE*)malloc(sizeof(struct SHAPE));
+		map.shapes[i]=cubes[i];
+		transformShape(cubes[i],"rotate",'x',5*theta);
+		transformShape(cubes[i],"rotate",'y',5*theta);
+	}
 	while(running){
 		while(SDL_PollEvent(&e)){
 			if(e.type==SDL_EVENT_QUIT)
@@ -97,35 +54,57 @@ int main(){
 			else if(e.type==SDL_EVENT_KEY_DOWN){
 				const bool* keyboardState=SDL_GetKeyboardState(NULL);
 				if(keyboardState[SDL_SCANCODE_W]){
-					cubeTransform3d(&cube2,"scale",'+',fov);
-					cube2.position[3]-=10;
+					transformShape(cubes[0],"scale",'+',theta);
+					transformShape(cubes[1],"scale",'+',theta);
+					transformShape(cubes[2],"scale",'+',theta);
+					cubes[0]->position[2]-=10;
+					cubes[1]->position[2]-=10;
+					cubes[2]->position[2]-=10;
 					break;
 				}else if(keyboardState[SDL_SCANCODE_S]){
-					cubeTransform3d(&cube2,"scale",'-',fov);
-					cube2.position[4]+=10;
+					transformShape(cubes[0],"scale",'-',theta);
+					transformShape(cubes[1],"scale",'-',theta);
+					transformShape(cubes[2],"scale",'-',theta);
+					cubes[0]->position[2]+=10;
+					cubes[1]->position[2]+=10;
+					cubes[2]->position[2]+=10;
 					break;
 				}else if(keyboardState[SDL_SCANCODE_R]){
-					cubeTransform3d(&cube2,"rotate",'x',fov);
 					break;
 				}else if(keyboardState[SDL_SCANCODE_A]){
-					cube2.position[0]-=10;
+					transformShape(cubes[0],"rotate",'y',theta);
+					transformPosition(cubes[0],"rotate",'y',theta,perspectiveVals);
+					transformShape(cubes[1],"rotate",'y',theta);
+					transformShape(cubes[2],"rotate",'y',theta);
+					transformPosition(cubes[1],"rotate",'y',theta,perspectiveVals);
+					transformPosition(cubes[2],"rotate",'y',theta,perspectiveVals);
+					//cubes[0]->position[0]-=50;
 					break;
 				}else if(keyboardState[SDL_SCANCODE_D]){
-					cube2.position[0]+=10;
+					transformShape(cubes[0],"rotate",'y',-theta);
+					transformPosition(cubes[0],"rotate",'y',-theta,perspectiveVals);
+					transformShape(cubes[1],"rotate",'y',-theta);
+					transformShape(cubes[2],"rotate",'y',-theta);
+					transformPosition(cubes[1],"rotate",'y',-theta,perspectiveVals);
+					transformPosition(cubes[2],"rotate",'y',-theta,perspectiveVals);
 				}
 
 			}
 		}
 		SDL_SetRenderDrawColor(renderer,0,0,0,255);
 		SDL_RenderClear(renderer);
-		SDL_SetRenderDrawColor(renderer,180,0,0,255);
-		renderShape(cube2.vertices,cube2.position,"cube");
-		//renderShape(cube1.vertices,cube1.position,cube1.type)
-		cubeTransform3d(&cube2,"rotate",'y',fov);
-		cubeTransform3d(&cube2,"rotate",'z',fov);
-		//shapeTransform(cube2.vertices,xrotate);
-		//shapeTransform(cube2.vertices,zrotate);
-		//renderShape(cube1.vertices,cube1.position,cube1.type);
+		/*transformShape(cubes[2],"rotate",'y',theta);
+		transformShape(cubes[2],"rotate",'z',theta);
+		transformShape(cubes[2],"rotate",'x',theta);
+		transformShape(cubes[0],"rotate",'y',theta);
+		transformShape(cubes[0],"rotate",'z',theta);
+		transformShape(cubes[0],"rotate",'x',theta);
+		transformShape(cubes[1],"rotate",'y',theta);
+		transformShape(cubes[1],"rotate",'z',theta);
+		transformShape(cubes[1],"rotate",'x',theta);*/
+		boxcast(&map,perspectiveVals);
+		perspectiveProjectMap(&map,perspectiveVals);
+		renderMap(renderer,&map);
 		SDL_RenderPresent(renderer);
 
 		usleep(15000);
