@@ -5,6 +5,7 @@
 //Example parent is MAP struct
 struct SHAPE{
 	float position[4];
+	float perspectivePos[4];
 	int id;
 	int type;
 	int verticesCount;
@@ -20,6 +21,11 @@ struct MAP{
 	struct SHAPE** render;
 	int shapesCount;
 	int renderCount;
+	int id;
+};
+
+struct PLAYER{
+	float position[4];
 	int id;
 };
 
@@ -73,20 +79,37 @@ struct SHAPE* generateCube(float position[4],float sideLength,float color[4]){
 //Imposes a perspective upon a SHAPE, Perspective relevant data is passed in via vals array
 //The function uses a perspective projection matrix and a scaling matrix that is constructed in 
 //relation to the z coordinate of the shapes position (scales by a factor of 1+(100/z) 
-void perspectiveProjectShape(struct SHAPE* shape,float vals[6]){
+void perspectiveProjectShape(struct SHAPE* shape,struct PLAYER* player,float vals[6]){
 	float perspective[4][4]={
-		{.5*vals[2]/-tanf(vals[3]/2),0,0,0},
+		{1/-tanf(vals[3]/2),0,0,0},
 		{0,1/-tanf(vals[3]/2),0,0},
-		{0,0,(-(vals[5]-vals[4])/(vals[5]-vals[4])),((2*vals[5]*vals[4])/(vals[5]-vals[4]))},
-		{0,0,1,0}
+		{0,0,1,0},
+		{0,0,-1,0}
 	};
-	float depthFactor=1+(10/shape->position[2]);
+	/*float perspective[4][4]={
+		{vals[2]/tanf(vals[3]/2),0,0,0},
+		{0,1/tanf(vals[3]/2),0,0},
+		{0,0,vals[5]/(vals[5]-vals[4]),-(vals[5]/(vals[5]-vals[4]))*vals[5]},
+		{0,0,1,0}
+	};*/
+	/*float perspective[4][4]={
+		{.5/tanf(vals[3]/2),0,0,0},
+		{0,1/tanf(vals[3]/2),0,0},
+		{0,0,vals[5]/(vals[5]-vals[4]),1},
+		{0,0,(-vals[5]*vals[4])/(vals[5]-vals[4]),0}
+	};*/
+	float xDiff=shape->position[0]-player->position[0];
+	float zDiff=shape->position[2]-player->position[2];
+	float depthFactor=1-(.0001*sqrt((xDiff*xDiff)+(zDiff*zDiff)));
 	float depth[4][4]={
 		{depthFactor,0,0,0},
 		{0,depthFactor,0,0},
 		{0,0,depthFactor,0},
 		{0,0,0,1}
 	};
+	for(int i=0;i<4;i++){
+		shape->perspectivePos[i]=shape->position[i];
+	}
 	shape->perspectiveVerts=(float**)malloc(shape->verticesCount*sizeof(float*));
 	for(int i=0;i<shape->verticesCount;i++){
 		shape->perspectiveVerts[i]=(float*)malloc(4*sizeof(float));
@@ -96,11 +119,12 @@ void perspectiveProjectShape(struct SHAPE* shape,float vals[6]){
 		matMult3d(shape->perspectiveVerts[i],depth);
 		matMult3d(shape->perspectiveVerts[i],perspective);
 	}
+	//matMult3d(shape->perspectivePos,depth);
 }
 
-void perspectiveProjectMap(struct MAP* map,float vals[6]){
+void perspectiveProjectMap(struct MAP* map,struct PLAYER* player,float vals[6]){
 	for(int i=0;i<map->renderCount;i++){
-		perspectiveProjectShape(map->toRender[i],vals);
+		perspectiveProjectShape(map->toRender[i],player,vals);
 	}
 }
 
@@ -162,7 +186,7 @@ void transformShape(struct SHAPE* shape,char* transformType,char axis,float thet
 }
 
 //TODO: THIS NEEDS TO ROTATE AROUND LOCAL COORDINATES, NOT WINDOW COORDINATES!
-void transformPosition(struct SHAPE* shape,char* transformType,char axis,float angle,float vars[4]){
+void transformPosition(struct SHAPE* shape,struct PLAYER* player,char* transformType,char axis,float angle,float vars[4]){
 	float vectorBUFF[4];
 	if(strcmp(transformType,"rotate")==0&&axis=='y'){
 		float transform[4][4]={
@@ -172,20 +196,27 @@ void transformPosition(struct SHAPE* shape,char* transformType,char axis,float a
 			{0,0,0,1}
 		};
 		for(int i=0;i<4;i++){
-			if(i==0){
-				vectorBUFF[i]=shape->position[i]-(vars[0]/2);
+			if(i!=1){
+				vectorBUFF[i]=shape->position[i]-player->position[i];
 			}else{
 				vectorBUFF[i]=shape->position[i];
 			}
 		}
 		matMult3d(vectorBUFF,transform);
 		for(int i=0;i<4;i++){
-			if(i==0){
-				shape->position[i]=vectorBUFF[i]+(vars[0]/2);
+			if(i!=1){
+				shape->position[i]=vectorBUFF[i]+player->position[i];
 			}else{
 				shape->position[i]=vectorBUFF[i];
 			}
 		}
+	}
+}
+
+void rotateMap(struct MAP* map,struct PLAYER* player,char axis,float angle,float vals[4]){
+	for(int i=0;i<map->shapesCount;i++){
+		transformShape(map->shapes[i],"rotate",'y',angle);
+		transformPosition(map->shapes[i],player,"rotate",'y',angle,vals);
 	}
 }
 

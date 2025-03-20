@@ -1,11 +1,11 @@
 #ifndef RENDER_H
 #define RENDER_H
-void boxcast(struct MAP* map,float vals[6]){
+void boxcast(struct MAP* map,struct PLAYER* player,float vals[6]){
 	map->renderCount=0;
 	for(int i=0;i<map->shapesCount;i++){
-		if(map->shapes[i]->position[0]>=0&&map->shapes[i]->position[0]<=vals[0]){
+		if(abs(map->shapes[i]->position[0]-player->position[0])<=vals[0]/2){
 			if(map->shapes[i]->position[1]>=0&&map->shapes[i]->position[1]<=vals[1]){
-				if(map->shapes[i]->position[2]>=0&&map->shapes[i]->position[2]<=vals[5]){
+				if(map->shapes[i]->position[2]>player->position[2]&&abs(map->shapes[i]->position[2]-player->position[2])<=vals[5]){
 					map->toRender=(struct SHAPE**)realloc(map->toRender,(i+1)*sizeof(struct SHAPE*));
 					map->toRender[map->renderCount]=(struct SHAPE*)malloc(sizeof(struct SHAPE));
 					map->toRender[map->renderCount]=map->shapes[i];
@@ -17,11 +17,22 @@ void boxcast(struct MAP* map,float vals[6]){
 }
 
 
-void renderCube(SDL_Renderer* renderer, struct SHAPE* cube){
+void renderCube(SDL_Renderer* renderer,struct PLAYER* player, struct SHAPE* cube){
 	float normalizedCube[8][4];
 	for(int i=0;i<8;i++){
 		for(int j=0;j<4;j++){
-			normalizedCube[i][j]=cube->position[j]-cube->perspectiveVerts[i][j];
+			if(j==0){
+				normalizedCube[i][j]=720-(player->position[j]-cube->perspectivePos[j]-cube->perspectiveVerts[i][j]);
+			}
+			else if(j==1){
+				normalizedCube[i][j]=360-(player->position[j]-cube->perspectivePos[j]-cube->perspectiveVerts[i][j]);
+			}
+			else if(j==2){
+				normalizedCube[i][j]=0-(player->position[j]-cube->perspectivePos[j]-cube->perspectiveVerts[i][j]);
+			}
+			else{
+				normalizedCube[i][j]=(player->position[j]-cube->perspectivePos[j]-cube->perspectiveVerts[i][j]);
+			}
 		}
 	}
 	SDL_SetRenderDrawColor(renderer,cube->color[0],cube->color[1],cube->color[2],cube->color[3]);
@@ -47,9 +58,9 @@ void renderPlane(SDL_Renderer* renderer,struct SHAPE* plane,float color[4]){
 }
 
 
-void renderMap(SDL_Renderer* renderer, struct MAP* map){
+void renderMap(SDL_Renderer* renderer,struct PLAYER* player, struct MAP* map){
 	for(int i=0;i<map->renderCount;i++){
-		renderCube(renderer,map->toRender[i]);
+		renderCube(renderer,player,map->toRender[i]);
 	}
 }
 
