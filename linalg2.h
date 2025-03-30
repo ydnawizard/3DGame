@@ -1,6 +1,7 @@
 #ifndef LINALG_H
 #define LINALG_H
 
+
 //Every object on the screen is a SHAPE struct
 //Example parent is MAP struct
 struct SHAPE{
@@ -18,7 +19,7 @@ struct SHAPE{
 struct MAP{
 	struct SHAPE** shapes;
 	struct SHAPE** toRender;
-	struct SHAPE** render;
+	//struct SHAPE** render;
 	int shapesCount;
 	int renderCount;
 	int id;
@@ -86,21 +87,9 @@ void perspectiveProjectShape(struct SHAPE* shape,struct PLAYER* player,float val
 		{0,0,1,0},
 		{0,0,-1,0}
 	};
-	/*float perspective[4][4]={
-		{vals[2]/tanf(vals[3]/2),0,0,0},
-		{0,1/tanf(vals[3]/2),0,0},
-		{0,0,vals[5]/(vals[5]-vals[4]),-(vals[5]/(vals[5]-vals[4]))*vals[5]},
-		{0,0,1,0}
-	};*/
-	/*float perspective[4][4]={
-		{.5/tanf(vals[3]/2),0,0,0},
-		{0,1/tanf(vals[3]/2),0,0},
-		{0,0,vals[5]/(vals[5]-vals[4]),1},
-		{0,0,(-vals[5]*vals[4])/(vals[5]-vals[4]),0}
-	};*/
 	float xDiff=shape->position[0]-player->position[0];
 	float zDiff=shape->position[2]-player->position[2];
-	float depthFactor=1-(.0001*sqrt((xDiff*xDiff)+(zDiff*zDiff)));
+	float depthFactor=1-(.00015*sqrt((xDiff*xDiff)+(zDiff*zDiff)));
 	float depth[4][4]={
 		{depthFactor,0,0,0},
 		{0,depthFactor,0,0},

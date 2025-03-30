@@ -32,11 +32,11 @@ int main(){
 	float pink[4]={255,0,255,255};
 	float cyan[4]={0,255,247,255};
 	float position1[4]={360.0,360.0,100,0};
-	float position2[4]={1080.0,360.0,100.0,0};
-	float position3[4]={360.0,360.0,5000.0,0};
-	float position4[4]={1080.0,360.0,5000.0,0};
+	float position2[4]={900.0,360.0,100.0,0};
+	float position3[4]={360.0,360.0,2500.0,0};
+	float position4[4]={900.0,360.0,2500.0,0};
 	float position5[4]={360.0,360.0,500.0,0};
-	float position6[4]={1080.0,360.0,500.0,0};
+	float position6[4]={900.0,360.0,500.0,0};
 	float perspectiveVals[6]={windowWidth,windowHeight,aspectRatio,fov,znear,zfar};
 	cubes[0]=generateCube(position1,100,red);
 	cubes[1]=generateCube(position2,100,green);
@@ -75,9 +75,11 @@ int main(){
 				}else if(keyboardState[SDL_SCANCODE_R]){
 					break;
 				}else if(keyboardState[SDL_SCANCODE_A]){
+					rotateMap(&map,&player,'y',-theta/10,perspectiveVals);
 					player.position[0]-=10;
 					break;
 				}else if(keyboardState[SDL_SCANCODE_D]){
+					rotateMap(&map,&player,'y',theta/10,perspectiveVals);
 					player.position[0]+=10;
 					break;
 				}
@@ -85,10 +87,10 @@ int main(){
 			}
 			else if(e.type==SDL_EVENT_MOUSE_MOTION){
 				if(e.motion.xrel>0){
-					rotateMap(&map,&player,'y',-theta/10,perspectiveVals);
+				rotateMap(&map,&player,'y',-theta/10,perspectiveVals);
 				}
 				if(e.motion.xrel<0){
-					rotateMap(&map,&player,'y',theta/10,perspectiveVals);
+				rotateMap(&map,&player,'y',theta/10,perspectiveVals);
 				}
 			}
 		}
